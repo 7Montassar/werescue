@@ -9,6 +9,8 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
 import com.bumptech.glide.Glide;
@@ -16,6 +18,7 @@ import com.bumptech.glide.Glide;
 import java.time.LocalDate;
 import java.time.Period;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 
 public class PetDescriptionFragment extends Fragment {
 
@@ -25,21 +28,15 @@ public class PetDescriptionFragment extends Fragment {
     private TextView petAge;
     private TextView petDescription;
     private TextView petName;
-
     private TextView petLocation;
-
     private TextView petSpecies;
-
-    private TextView ownerName;
-
     private TextView ownerEmail;
-
     private ImageView backButton;
 
     @SuppressLint("MissingInflatedId")
+    @Nullable
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
+    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         // Inflate the layout for this fragment
         View view = inflater.inflate(R.layout.fragment_pet_description, container, false);
 
@@ -52,60 +49,85 @@ public class PetDescriptionFragment extends Fragment {
         petName = view.findViewById(R.id.petName);
         petLocation = view.findViewById(R.id.petLocation);
         petSpecies = view.findViewById(R.id.petSpecies);
-        ownerName = view.findViewById(R.id.ownerName);
         ownerEmail = view.findViewById(R.id.owner_email);
         backButton = view.findViewById(R.id.back_button);
 
-
         // Get the pet data from the Bundle
-        DataClass petData = (DataClass) getArguments().getSerializable("petData");
+        Bundle args = getArguments();
+        if (args != null) {
+            DataClass petData = (DataClass) args.getSerializable("petData");
 
-        // Check if petData is not null before using it
-        if (petData != null) {
-            // Use the pet data to update the views
-            Glide.with(this).load(petData.getImageURL()).into(petImage);
-            String gender = petData.getGender();
-            if ("F".equals(gender)) {
-                petGender.setText("Female");
-            } else if ("M".equals(gender)) {
-                petGender.setText("Male");
+            // Check if petData is not null before using it
+            if (petData != null) {
+                populatePetDetails(petData);
+            } else {
+                // If petData is null, display a message
+                Toast.makeText(getContext(), "No pet data found", Toast.LENGTH_SHORT).show();
             }
-            // Display the weight
-            petWeight.setText(petData.getWeight() + " Kg");
-            // Parse the birthday string into a LocalDate
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-            LocalDate birthday = LocalDate.parse(petData.getBirthday(), formatter);
-
-            // Calculate the age
-            Period period = Period.between(birthday, LocalDate.now());
-            int age = period.getYears();
-
-            // Display the age
-            petAge.setText(age + " years");
-            petDescription.setText(petData.getDescription());
-            petName.setText(petData.getPetName());
-            petLocation.setText(petData.getLocation());
-            ownerName.setText(petData.getOwnerName());
-            ownerEmail.setText(petData.getOwnerEmail());
-            petSpecies.setText(petData.getSpecies());
+        } else {
+            // If arguments are null, display a message
+            Toast.makeText(getContext(), "No arguments found", Toast.LENGTH_SHORT).show();
         }
 
-        else {
-            // If petData is null, display a message
-            Toast.makeText(getContext(), "No pet data found", Toast.LENGTH_SHORT).show();
-        }
-
-        backButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                HomeFragment homeFragment = new HomeFragment();
-                getFragmentManager().beginTransaction()
-                        .replace(R.id.frame_layout, homeFragment)
-                        .addToBackStack(null)
-                        .commit();
+        // Handle back button click
+        backButton.setOnClickListener(v -> {
+            // Navigate back to the previous fragment
+            if (getFragmentManager() != null) {
+                getFragmentManager().popBackStack();
             }
         });
 
         return view;
+    }
+
+    private void populatePetDetails(@NonNull DataClass petData) {
+        // Load the pet image using Glide
+        String imageUrl = petData.getImagePath();
+        if (imageUrl != null && !imageUrl.isEmpty()) {
+            Glide.with(this)
+                    .load(imageUrl)
+                    .placeholder(R.drawable.baseline_pets_24) // Placeholder image
+                    .error(R.drawable.baseline_pets_24) // Error image
+                    .into(petImage);
+        } else {
+            petImage.setImageResource(R.drawable.baseline_pets_24); // Set a default image if no URL is provided
+        }
+
+        // Set gender
+        String gender = petData.getGender();
+        if ("F".equals(gender)) {
+            petGender.setText("Female");
+        } else if ("M".equals(gender)) {
+            petGender.setText("Male");
+        } else {
+            petGender.setText("Unknown");
+        }
+
+        // Set weight
+        String weight = petData.getWeight();
+        petWeight.setText(weight != null ? weight + " Kg" : "Unknown");
+
+        // Parse and calculate age
+        String birthdayStr = petData.getBirthday();
+        if (birthdayStr != null && !birthdayStr.isEmpty()) {
+            try {
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+                LocalDate birthday = LocalDate.parse(birthdayStr, formatter);
+                Period period = Period.between(birthday, LocalDate.now());
+                int age = period.getYears();
+                petAge.setText(age + " years");
+            } catch (DateTimeParseException e) {
+                petAge.setText("Invalid date");
+            }
+        } else {
+            petAge.setText("Unknown");
+        }
+
+        // Set other pet details
+        petDescription.setText(petData.getDescription() != null ? petData.getDescription() : "No description available");
+        petName.setText(petData.getPetName() != null ? petData.getPetName() : "Unknown");
+        petLocation.setText(petData.getLocation() != null ? petData.getLocation() : "Unknown");
+        petSpecies.setText(petData.getSpecies() != null ? petData.getSpecies() : "Unknown");
+        ownerEmail.setText(petData.getEmail() != null ? petData.getEmail() : "Unknown");
     }
 }

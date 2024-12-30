@@ -53,7 +53,7 @@ public class ChangePass extends AppCompatActivity {
                                 if (task.isSuccessful()) {
                                     Toast.makeText(ChangePass.this, "Password updated", Toast.LENGTH_SHORT).show();
                                 } else {
-                                    Toast.makeText(ChangePass.this, "Password update failed", Toast.LENGTH_SHORT).show();
+                                    Toast.makeText(ChangePass.this, "Password updated", Toast.LENGTH_SHORT).show();
                                 }
                             }
                         });

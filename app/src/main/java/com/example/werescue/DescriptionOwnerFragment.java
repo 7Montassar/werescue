@@ -3,6 +3,7 @@ package com.example.werescue;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -14,9 +15,11 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
+import java.io.File;
 import java.time.LocalDate;
 import java.time.Period;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 
 public class DescriptionOwnerFragment extends Fragment {
 
@@ -28,12 +31,14 @@ public class DescriptionOwnerFragment extends Fragment {
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_description_owner, container, false);
 
+        // Retrieve the pet object from the arguments
         Bundle args = getArguments();
         DataClass pet = null;
         if (args != null) {
             pet = (DataClass) args.getSerializable("selectedPet");
         }
 
+        // Initialize UI elements
         backButton = view.findViewById(R.id.back_button);
         petImage = view.findViewById(R.id.petImage);
         TextView petName = view.findViewById(R.id.petName);
@@ -45,47 +50,67 @@ public class DescriptionOwnerFragment extends Fragment {
         TextView ownerEmail = view.findViewById(R.id.owner_email);
         TextView petSpecies = view.findViewById(R.id.petSpecies);
 
+        // Populate the UI with pet data
         if (pet != null) {
             petName.setText(pet.getPetName());
             petDescription.setText(pet.getDescription());
+
+            // Set gender
             String gender = pet.getGender();
             if ("F".equals(gender)) {
                 petGender.setText("Female");
             } else if ("M".equals(gender)) {
                 petGender.setText("Male");
+            } else {
+                petGender.setText("Unknown");
             }
-            // Parse the birthday string into a LocalDate
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-            LocalDate birthday = LocalDate.parse(pet.getBirthday(), formatter);
 
-            // Calculate the age
-            Period period = Period.between(birthday, LocalDate.now());
-            int age = period.getYears();
+            // Parse and calculate age
+            String birthdayStr = pet.getBirthday();
+            if (birthdayStr != null && !birthdayStr.isEmpty()) {
+                try {
+                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+                    LocalDate birthday = LocalDate.parse(birthdayStr, formatter);
+                    Period period = Period.between(birthday, LocalDate.now());
+                    int age = period.getYears();
+                    petAge.setText(age + " years");
+                } catch (DateTimeParseException e) {
+                    petAge.setText("Invalid date");
+                }
+            } else {
+                petAge.setText("Unknown");
+            }
 
-            // Display the age
-            petAge.setText(age + " years");
-            petLocation.setText(pet.getLocation());
-            // Display the weight
+            // Set other pet details
+            petLocation.setText(pet.getLocation() != null ? pet.getLocation() : "Unknown");
             petWeight.setText(pet.getWeight() + " Kg");
-            petSpecies.setText(pet.getSpecies());
-            // Get the owner's email from shared preferences
-            SharedPreferences sharedPreferences = getActivity().getSharedPreferences("user_info", Context.MODE_PRIVATE);
-            String OwnerEmail = sharedPreferences.getString("email", "");
-            ownerEmail.setText(OwnerEmail);
-            Bitmap imageBitmap = pet.getImageBitmap();
-            if (imageBitmap != null) {
-                petImage.setImageBitmap(imageBitmap);
+            petSpecies.setText(pet.getSpecies() != null ? pet.getSpecies() : "Unknown");
+
+            // Retrieve owner's email from SharedPreferences
+            SharedPreferences sharedPreferences = getActivity().getSharedPreferences("login", Context.MODE_PRIVATE);
+            String ownerEmailStr = sharedPreferences.getString("email", "Unknown");
+            ownerEmail.setText(ownerEmailStr);
+
+            // Set pet image
+            String imagePath = pet.getImagePath();
+            if (imagePath != null) {
+                File imageFile = new File(imagePath);
+                if (imageFile.exists()) {
+                    Bitmap bitmap = BitmapFactory.decodeFile(imagePath);
+                    petImage.setImageBitmap(bitmap);
+                } else {
+                    petImage.setImageResource(R.drawable.baseline_pets_24); // Set a default image if the file doesn't exist
+                }
+            } else {
+                petImage.setImageResource(R.drawable.baseline_pets_24); // Set a default image if no image path is provided
             }
         }
 
+        // Handle back button click
         backButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                PetsFragment petsFragment = new PetsFragment();
-                getFragmentManager().beginTransaction()
-                        .replace(R.id.frame_layout, petsFragment)
-                        .addToBackStack(null)
-                        .commit();
+                getParentFragmentManager().popBackStack(); // Navigate back to the previous fragment
             }
         });
 

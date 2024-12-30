@@ -5,23 +5,23 @@ import android.graphics.Bitmap;
 
 import java.io.Serializable;
 
-public class DataClass implements Serializable {
-    private String imageURL, petName, description, gender, species, birthday, location, weight, id, imagePath, ownerName, ownerEmail;
-    private String name;
-    private int age;
+public class DataClass {
+    private String id;
+    private String petName;
+    private String description;
+    private String gender;
+    private String species;
+    private String birthday;
+    private String location;
+    private String weight;
+    private String imagePath;
+    private String email;
 
-    private Bitmap imageBitmap;
-    public DataClass(){
-
+    // Default constructor required for calls to DataSnapshot.getValue(DataClass.class)
+    public DataClass() {
     }
 
-    public DataClass(String name, String gender, int age) {
-        this.name = name;
-        this.gender = gender;
-        this.age = age;
-    }
-
-    public DataClass(String id, String petName, String description, String gender, String species, String birthday, String location, String weight, String imagePath) {
+    public DataClass(String id, String petName, String description, String gender, String species, String birthday, String location, String weight, String imagePath, String email) {
         this.id = id;
         this.petName = petName;
         this.description = description;
@@ -31,70 +31,16 @@ public class DataClass implements Serializable {
         this.location = location;
         this.weight = weight;
         this.imagePath = imagePath;
+        this.email = email;
     }
 
-    public DataClass(String imageURL, String petName, String description, String gender, String species, String birthday, String location, String weight) {
-        this.imageURL = imageURL;
-        this.petName = petName;
-        this.description = description;
-        this.gender = gender;
-        this.species = species;
-        this.birthday = birthday;
-        this.location = location;
-        this.weight = weight;
+    // Getters and setters
+    public String getId() {
+        return id;
     }
 
-    public DataClass(String id, String name, String description, String gender, String species, String birthday, String location, String weight, byte[] image) {
-    }
-
-    public DataClass(String imageURL, String petName, String description, String gender, String species, String birthday, String location, String weight, String ownerName, String ownerEmail) {
-        this.imageURL = imageURL;
-        this.petName = petName;
-        this.description = description;
-        this.gender = gender;
-        this.species = species;
-        this.birthday = birthday;
-        this.location = location;
-        this.weight = weight;
-        this.ownerName = ownerName;
-        this.ownerEmail = ownerEmail;
-    }
-
-    public DataClass(String id, String petName, String description, String gender, String species, String birthday, String location, String weight, String imagePath, Bitmap imageBitmap) {
+    public void setId(String id) {
         this.id = id;
-        this.petName = petName;
-        this.description = description;
-        this.gender = gender;
-        this.species = species;
-        this.birthday = birthday;
-        this.location = location;
-        this.weight = weight;
-        this.imagePath = imagePath;
-        this.imageBitmap = imageBitmap;
-    }
-
-    public Bitmap getImageBitmap() {
-        return imageBitmap;
-    }
-
-    public void setImageBitmap(Bitmap imageBitmap) {
-        this.imageBitmap = imageBitmap;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public int getAge() {
-        return age;
-    }
-
-    public String getImageURL() {
-        return imageURL;
-    }
-
-    public void setImageURL(String imageURL) {
-        this.imageURL = imageURL;
     }
 
     public String getPetName() {
@@ -153,26 +99,19 @@ public class DataClass implements Serializable {
         this.weight = weight;
     }
 
-    public String getOwnerName() {
-    return ownerName;
-    }
-
-    public void setOwnerName(String ownerName) {
-        this.ownerName = ownerName;
-    }
-
-    public String getOwnerEmail() {
-        return ownerEmail;
-    }
-
-    public void setOwnerEmail(String ownerEmail) {
-        this.ownerEmail = ownerEmail;
-    }
     public String getImagePath() {
-        return imageURL;
+        return imagePath;
     }
 
     public void setImagePath(String imagePath) {
-        this.imageURL = imagePath;
+        this.imagePath = imagePath;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
     }
 }

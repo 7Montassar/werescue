@@ -1,36 +1,26 @@
 {
   "project_info": {
-    "project_number": "935306948164",
-    "project_id": "werescue-87152",
-    "storage_bucket": "werescue-87152.appspot.com"
+    "project_number": "722243341298",
+    "project_id": "werescue-f5e1a",
+    "storage_bucket": "werescue-f5e1a.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:935306948164:android:d68565644fc73f17be5611",
+        "mobilesdk_app_id": "1:722243341298:android:0521be7f5437b2fe35b96b",
         "android_client_info": {
           "package_name": "com.example.werescue"
         }
       },
-      "oauth_client": [
-        {
-          "client_id": "935306948164-jvup6ht7gvov0guse3lemkmltd6j6fnv.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
+      "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyB-xDAYusjWcQDh8y8HhvpcYh5YZpcVOiI"
+          "current_key": "AIzaSyD2utEi7Hh6DJq5LDwy3_EqmzcCD__69UU"
         }
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "935306948164-jvup6ht7gvov0guse3lemkmltd6j6fnv.apps.googleusercontent.com",
-              "client_type": 3
-            }
-          ]
+          "other_platform_oauth_client": []
         }
       }
     }

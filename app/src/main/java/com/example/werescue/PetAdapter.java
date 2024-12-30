@@ -2,6 +2,7 @@ package com.example.werescue;
 
 import android.content.Context;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -13,6 +14,8 @@ import androidx.annotation.NonNull;
 import androidx.fragment.app.FragmentActivity;
 import androidx.recyclerview.widget.RecyclerView;
 
+import java.io.File;
+import java.io.Serializable;
 import java.util.List;
 
 public class PetAdapter extends RecyclerView.Adapter<PetAdapter.PetViewHolder> {
@@ -35,33 +38,41 @@ public class PetAdapter extends RecyclerView.Adapter<PetAdapter.PetViewHolder> {
     @Override
     public void onBindViewHolder(@NonNull PetViewHolder holder, int position) {
         DataClass pet = petList.get(position);
-        holder.recyclerCaption.setText(pet.getPetName());
-        holder.recyclerCaptionLocation.setText(pet.getLocation());
 
-        // Set the image bitmap to the ImageView
-        Bitmap imageBitmap = pet.getImageBitmap();
-        if (imageBitmap != null) {
-            holder.recyclerImage.setImageBitmap(imageBitmap);
+        // Set pet name and location
+        holder.recyclerCaption.setText(pet.getPetName() != null ? pet.getPetName() : "Unknown");
+        holder.recyclerCaptionLocation.setText(pet.getLocation() != null ? pet.getLocation() : "Unknown");
+
+        // Load the image from the file path
+        String imagePath = pet.getImagePath();
+        if (imagePath != null) {
+            File imageFile = new File(imagePath);
+            if (imageFile.exists()) {
+                Bitmap bitmap = BitmapFactory.decodeFile(imagePath);
+                holder.recyclerImage.setImageBitmap(bitmap);
+            } else {
+                holder.recyclerImage.setImageResource(R.drawable.baseline_pets_24); // Set a default image if the file doesn't exist
+            }
+        } else {
+            holder.recyclerImage.setImageResource(R.drawable.baseline_pets_24); // Set a default image if no image path is provided
         }
 
-        holder.itemView.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Bundle bundle = new Bundle();
-                bundle.putSerializable("selectedPet", pet);
-                DescriptionOwnerFragment fragment = new DescriptionOwnerFragment();
-                fragment.setArguments(bundle);
-                ((FragmentActivity)context).getSupportFragmentManager().beginTransaction()
-                        .replace(R.id.frame_layout, fragment)
-                        .addToBackStack(null)
-                        .commit();
-            }
+        // Set an OnClickListener to navigate to the DescriptionOwnerFragment
+        holder.itemView.setOnClickListener(v -> {
+            Bundle bundle = new Bundle();
+            bundle.putSerializable("selectedPet", (Serializable) pet);
+            DescriptionOwnerFragment fragment = new DescriptionOwnerFragment();
+            fragment.setArguments(bundle);
+            ((FragmentActivity) context).getSupportFragmentManager().beginTransaction()
+                    .replace(R.id.frame_layout, fragment)
+                    .addToBackStack(null)
+                    .commit();
         });
     }
 
     @Override
     public int getItemCount() {
-        return petList.size();
+        return petList != null ? petList.size() : 0;
     }
 
     public static class PetViewHolder extends RecyclerView.ViewHolder {

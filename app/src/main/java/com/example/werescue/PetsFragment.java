@@ -20,6 +20,7 @@ import android.view.ViewGroup;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -38,14 +39,13 @@ public class PetsFragment extends Fragment {
         sharedPreferences = getActivity().getSharedPreferences("login", Context.MODE_PRIVATE);
         loggedInUserEmail = sharedPreferences.getString("email", "");
 
+        // Check for READ_EXTERNAL_STORAGE permission
         if (ContextCompat.checkSelfPermission(getActivity(), Manifest.permission.READ_EXTERNAL_STORAGE)
-            != PackageManager.PERMISSION_GRANTED) {
-            // Permission is not granted
+                != PackageManager.PERMISSION_GRANTED) {
+            // Request permission if not granted
             ActivityCompat.requestPermissions(getActivity(),
                     new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
                     MY_PERMISSIONS_REQUEST_READ_EXTERNAL_STORAGE);
-        } else {
-            // Permission has already been granted
         }
 
         RecyclerView recyclerView = view.findViewById(R.id.petsRecyclerView);
@@ -54,31 +54,31 @@ public class PetsFragment extends Fragment {
         PetDatabaseHelper dbHelper = new PetDatabaseHelper(getActivity());
         SQLiteDatabase db = dbHelper.getReadableDatabase();
 
+        // Query the database
         String[] projection = {
-            "id",
-            "name",
-            "description",
-            "gender",
-            "species",
-            "birthday",
-            "location",
-            "weight",
-            "imagePath",
-            "email", // Include the email in the projection
-            "imageBitmap" // Include the image bitmap in the projection
+                "id",
+                "name",
+                "description",
+                "gender",
+                "species",
+                "birthday",
+                "location",
+                "weight",
+                "imagePath", // Use imagePath instead of imageBitmap
+                "email"
         };
 
         String selection = "email = ?";
-        String[] selectionArgs = { loggedInUserEmail };
+        String[] selectionArgs = {loggedInUserEmail};
 
         Cursor cursor = db.query(
-            "Pets",
-            projection,
-            selection,
-            selectionArgs,
-            null,
-            null,
-            null
+                "Pets",
+                projection,
+                selection,
+                selectionArgs,
+                null,
+                null,
+                null
         );
 
         List<DataClass> petList = new ArrayList<>();
@@ -93,14 +93,20 @@ public class PetsFragment extends Fragment {
             String weight = cursor.getString(cursor.getColumnIndexOrThrow("weight"));
             String imagePath = cursor.getString(cursor.getColumnIndexOrThrow("imagePath"));
 
-            // Get the image bitmap from the cursor
-            byte[] imageBitmapBytes = cursor.getBlob(cursor.getColumnIndexOrThrow("imageBitmap"));
-            Bitmap imageBitmap = BitmapFactory.decodeByteArray(imageBitmapBytes, 0, imageBitmapBytes.length);
+            // Load the image from the file path
+            Bitmap imageBitmap = null;
+            if (imagePath != null) {
+                File imageFile = new File(imagePath);
+                if (imageFile.exists()) {
+                    imageBitmap = BitmapFactory.decodeFile(imagePath);
+                }
+            }
 
-            petList.add(new DataClass(id, name, description, gender, species, birthday, location, weight, imagePath, imageBitmap));
+            petList.add(new DataClass(id, name, description, gender, species, birthday, location, weight, imagePath, imageBitmap.toString()));
         }
         cursor.close();
 
+        // Set up the RecyclerView adapter
         PetAdapter adapter = new PetAdapter(getActivity(), petList);
         recyclerView.setAdapter(adapter);
 
@@ -113,9 +119,9 @@ public class PetsFragment extends Fragment {
             case MY_PERMISSIONS_REQUEST_READ_EXTERNAL_STORAGE: {
                 if (grantResults.length > 0
                         && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    // permission was granted
+                    // Permission was granted
                 } else {
-                    // permission denied
+                    // Permission denied
                 }
                 return;
             }

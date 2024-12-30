@@ -1,5 +1,7 @@
 package com.example.werescue;
 
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -11,53 +13,29 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.Serializable;
-
-import androidx.annotation.NonNull;
-import androidx.fragment.app.Fragment;
-import androidx.recyclerview.widget.RecyclerView;
-
-import com.google.firebase.database.DataSnapshot;
-import com.google.firebase.database.DatabaseError;
-import com.google.firebase.database.DatabaseReference;
-import com.google.firebase.database.FirebaseDatabase;
-import com.google.firebase.database.Query;
-import com.google.firebase.database.ValueEventListener;
-
 import java.util.ArrayList;
 import java.util.List;
 
+import androidx.annotation.NonNull;
+import androidx.fragment.app.Fragment;
+
 public class SearchFragment extends Fragment {
 
-    private RecyclerView recyclerView;
-    private MyAdapter myAdapter;
-
-    private SearchFilter searchFilter;
-
-    private Button buttonSearch;
     private TextView petName;
     private TextView petAge;
     private RadioButton petGenderMale;
     private RadioButton petGenderFemale;
+    private Button buttonSearch;
 
-    public interface OnDataSelectedListener {
-        void onDataSelected(List<DataClass> pets);
-    }
-
-    private OnDataSelectedListener onDataSelectedListener;
-
-    public void setOnDataSelectedListener(OnDataSelectedListener listener) {
-        this.onDataSelectedListener = listener;
-    }
-
-
+    private PetDatabaseHelper dbHelper;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_search, container, false);
 
-        // Initialize the SearchFilter fragment
-        searchFilter = (SearchFilter) getFragmentManager().findFragmentById(R.id.filterRecyclerView);
+        // Initialize SQLite database helper
+        dbHelper = new PetDatabaseHelper(getActivity());
 
         initializeViews(view);
         setupSearchButton();
@@ -83,88 +61,109 @@ public class SearchFragment extends Fragment {
     }
 
     private void performSearch() {
-    String name = petName.getText().toString().trim();
-    String age = petAge.getText().toString().trim();
-    boolean isGenderSelected = petGenderMale.isChecked() || petGenderFemale.isChecked();
-    if (name.isEmpty() && age.isEmpty() && !isGenderSelected) {
-        Toast.makeText(getContext(), "Please fill at least one field", Toast.LENGTH_SHORT).show();
-        return;
-    }
-    String gender = petGenderMale.isChecked() ? "M" : "F";
+        String name = petName.getText().toString().trim();
+        String age = petAge.getText().toString().trim();
+        boolean isGenderSelected = petGenderMale.isChecked() || petGenderFemale.isChecked();
 
-    DatabaseReference databaseReference = FirebaseDatabase.getInstance().getReference("Images");
-    Log.d("SearchFragment", "Connected to Firebase database");
-    Query query = createQuery(databaseReference, name, age, gender);
-
-    query.addValueEventListener(new ValueEventListener() {
-        @Override
-        public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
-            List<DataClass> pets = new ArrayList<>();
-            for (DataSnapshot snapshot : dataSnapshot.getChildren()) {
-                DataClass data = snapshot.getValue(DataClass.class);
-                pets.add(data);
-            }
-            logNumberOfPets();
-
-            // Log the size of the pets list
-            Log.d("SearchFragment", "Number of pets: " + pets.size());
-            Log.d("SearchFragment", "Query parameters - Name: " + name + ", Age: " + age + ", Gender: " + gender);
-            Log.d("SearchFragment", "DataSnapshot: " + dataSnapshot.toString());
-
-            if (pets.isEmpty()) {
-                // If there are no pets, navigate back to the SearchFragment and display a toast message
-                getFragmentManager().popBackStack();
-                Toast.makeText(getContext(), "There are no matches", Toast.LENGTH_SHORT).show();
-            } else {
-                // Create a bundle and put the pets list into it
-                Bundle bundle = new Bundle();
-                bundle.putSerializable("pets", (Serializable) pets);
-                SearchFilter searchFilter = new SearchFilter();
-                searchFilter.setArguments(bundle);
-
-                // Replace the current fragment with the SearchFilter fragment
-                getFragmentManager().beginTransaction()
-                        .replace(R.id.frame_layout, searchFilter)
-                        .addToBackStack(null)
-                        .commit();
-            }
+        if (name.isEmpty() && age.isEmpty() && !isGenderSelected) {
+            Toast.makeText(getContext(), "Please fill at least one field", Toast.LENGTH_SHORT).show();
+            return;
         }
 
-        @Override
-        public void onCancelled(@NonNull DatabaseError databaseError) {
-            // Log the error
-            Log.d("SearchFragment", "Database error: " + databaseError.getMessage());
+        String gender = petGenderMale.isChecked() ? "M" : petGenderFemale.isChecked() ? "F" : "";
+
+        // Perform the search in SQLite
+        List<DataClass> pets = searchInSQLite(name, age, gender);
+
+        if (pets.isEmpty()) {
+            Toast.makeText(getContext(), "There are no matches", Toast.LENGTH_SHORT).show();
+        } else {
+            // Pass the search results to the SearchFilter fragment
+            Bundle bundle = new Bundle();
+            bundle.putSerializable("pets", (Serializable) pets);
+            SearchFilter searchFilter = new SearchFilter();
+            searchFilter.setArguments(bundle);
+
+            // Replace the current fragment with the SearchFilter fragment
+            getFragmentManager().beginTransaction()
+                    .replace(R.id.frame_layout, searchFilter)
+                    .addToBackStack(null)
+                    .commit();
         }
-    });
-}
-
-
-    private void logNumberOfPets() {
-        DatabaseReference databaseReference = FirebaseDatabase.getInstance().getReference("Images");
-        databaseReference.addValueEventListener(new ValueEventListener() {
-            @Override
-            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
-                long numberOfPets = dataSnapshot.getChildrenCount();
-                Log.d("SearchFragment", "Number of pets: " + numberOfPets);
-            }
-
-            @Override
-            public void onCancelled(@NonNull DatabaseError databaseError) {
-                Log.d("SearchFragment", "Database error: " + databaseError.getMessage());
-            }
-        });
     }
-    private Query createQuery(DatabaseReference databaseReference, String name, String age, String gender) {
-        Query query = null;
 
+    private List<DataClass> searchInSQLite(String name, String age, String gender) {
+        SQLiteDatabase db = dbHelper.getReadableDatabase();
+        List<DataClass> pets = new ArrayList<>();
+
+        // Build the query dynamically based on the search criteria
+        StringBuilder queryBuilder = new StringBuilder("SELECT * FROM Pets WHERE 1=1");
         if (!name.isEmpty()) {
-            query = databaseReference.orderByChild("petName").equalTo(name);
-        } else if (!age.isEmpty()) {
-            query = databaseReference.orderByChild("age").equalTo(age);
-        } else if (!gender.isEmpty()) {
-            query = databaseReference.orderByChild("gender").equalTo(gender);
+            queryBuilder.append(" AND name LIKE '%").append(name).append("%'");
+        }
+        if (!age.isEmpty()) {
+            queryBuilder.append(" AND birthday LIKE '%").append(age).append("%'");
+        }
+        if (!gender.isEmpty()) {
+            queryBuilder.append(" AND gender = '").append(gender).append("'");
         }
 
-        return query;
+        Cursor cursor = db.rawQuery(queryBuilder.toString(), null);
+
+        if (cursor.moveToFirst()) {
+            do {
+                // Get data from the cursor
+                String id = cursor.getString(cursor.getColumnIndexOrThrow("id"));
+                String petName = cursor.getString(cursor.getColumnIndexOrThrow("name"));
+                String description = cursor.getString(cursor.getColumnIndexOrThrow("description"));
+                String petGender = cursor.getString(cursor.getColumnIndexOrThrow("gender"));
+                String species = cursor.getString(cursor.getColumnIndexOrThrow("species"));
+                String birthday = cursor.getString(cursor.getColumnIndexOrThrow("birthday"));
+                String location = cursor.getString(cursor.getColumnIndexOrThrow("location"));
+                int weight = cursor.getInt(cursor.getColumnIndexOrThrow("weight"));
+                String imagePath = cursor.getString(cursor.getColumnIndexOrThrow("imagePath"));
+                String email = cursor.getString(cursor.getColumnIndexOrThrow("email"));
+
+                // Create a DataClass object and add it to the list
+                DataClass dataClass = new DataClass(id, petName, description, petGender, species, birthday, location, String.valueOf(weight), imagePath, email);
+                pets.add(dataClass);
+            } while (cursor.moveToNext());
+        }
+
+        cursor.close();
+
+        // Add mock data to the search results
+        addMockData(pets, name, age, gender);
+
+        return pets;
+    }
+
+    private void addMockData(List<DataClass> pets, String name, String age, String gender) {
+        // Mock data
+        List<DataClass> mockData = new ArrayList<>();
+        // Add mock data directly to the dataList
+        String buddyImagePath = "android.resource://" + getActivity().getPackageName() + "/" + R.drawable.buddy_image;
+        String mittensImagePath = "android.resource://" + getActivity().getPackageName() + "/" + R.drawable.mittens_image;
+        String charlieImagePath = "android.resource://" + getActivity().getPackageName() + "/" + R.drawable.charlie_image;
+        String HansImagePath = "android.resource://" + getActivity().getPackageName() + "/" + R.drawable.hans_image;
+
+
+        // Add mock data to the dataList
+        mockData.add(new DataClass("101", "Buddy", "Friendly dog", "M", "Dog", "01/01/2020", "New York", "15", buddyImagePath, "mock_owner1@example.com"));
+        mockData.add(new DataClass("102", "Mittens", "Playful cat", "F", "Cat", "15/05/2019", "Los Angeles", "5", mittensImagePath, "mock_owner2@example.com"));
+        mockData.add(new DataClass("103", "Charlie", "Energetic rabbit", "M", "Rabbit", "10/10/2021", "Chicago", "2", charlieImagePath, "mock_owner3@example.com"));
+        mockData.add(new DataClass("104", "Hans", "Friendly cat", "M", "Cat", "01/01/2020", "New York", "15", HansImagePath, "mock_owner4@example.com"));
+
+
+        // Filter mock data based on the search criteria
+        for (DataClass mock : mockData) {
+            boolean matchesName = name.isEmpty() || mock.getPetName().toLowerCase().contains(name.toLowerCase());
+            boolean matchesAge = age.isEmpty() || mock.getBirthday().contains(age);
+            boolean matchesGender = gender.isEmpty() || mock.getGender().equalsIgnoreCase(gender);
+
+            if (matchesName && matchesAge && matchesGender) {
+                pets.add(mock);
+            }
+        }
     }
 }
